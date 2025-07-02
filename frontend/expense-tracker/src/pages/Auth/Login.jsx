@@ -21,6 +21,10 @@ const Login = () => {
       setError('Please enter your password');
       return;
     }
+    if (!/^.{6,}$/.test(password)) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
     setError("");
   }
 
