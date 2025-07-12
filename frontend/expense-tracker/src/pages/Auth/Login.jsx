@@ -3,6 +3,8 @@ import AuthLayout from '../../components/layouts/AuthLayout'
 import { useNavigate, Link } from 'react-router-dom';
 import Input from '../../components/Inputs/Input';
 import { validateEmail } from '../../utils/helper';
+import axiosInstance from '../../utils/axiosInstance';
+import { API_PATHS } from '../../utils/apiPaths';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -13,11 +15,11 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!validateEmail(email)){
+    if (!validateEmail(email)) {
       setError('Please enter a valid email address');
       return;
     }
-    if (!password){
+    if (!password) {
       setError('Please enter your password');
       return;
     }
@@ -26,8 +28,30 @@ const Login = () => {
       return;
     }
     setError("");
+
+    //Login API Call
+
+    try {
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, {
+        email,
+        password
+      });
+      const { token, user } = response.data;
+
+      if (token) {
+        localStorage.setItem("accessToken", token);
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      if (err.response && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError("An unexpected error occurred. Please try again later.");
+      }
+    }
   }
 
+  // This return should be inside the Login component
   return (
     <AuthLayout>
       <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify-center">
@@ -67,10 +91,9 @@ const Login = () => {
             </Link>
           </p>
         </form>
-
       </div>
     </AuthLayout>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
