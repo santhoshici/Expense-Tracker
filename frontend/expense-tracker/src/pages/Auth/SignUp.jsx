@@ -6,8 +6,8 @@ import { validateEmail } from '../../utils/helper';
 import ProfilePhotoSelector from '../../components/Inputs/ProfilePhotoSelector';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
-import { UserContext } from '../../context/userContext';
 import uploadImage from '../../utils/uploadImage';
+import { UserContext } from '../../context/UserContext';
 
 const SignUp = () => {
 
@@ -65,7 +65,7 @@ const SignUp = () => {
       const {token, user} = response.data;
 
       if (token){
-        localStorage.setItem("accessToken", token);
+        localStorage.setItem("token", token);
         updateUser(user);
         navigate('/dashboard');
       }
