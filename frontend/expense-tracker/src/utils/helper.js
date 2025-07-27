@@ -14,7 +14,7 @@ export const getInitials = (fullName) => {
   return initials.toUpperCase();
 }
 
- export const addSeperator = (num) => {
+export const addSeperator = (num) => {
   const [integerPart, fractionPart] = num.toString().split(".");
 
   const lastThree = integerPart.slice(-3);
@@ -26,3 +26,12 @@ export const getInitials = (fullName) => {
 
   return fractionPart ? `${formattedInteger}.${fractionPart}` : formattedInteger;
 };
+
+export const prepareExpenseBarChartData = (data = []) => {
+  const charData = data.map((item) => ({
+    category: item?.category,
+    amount: item?.amount
+  }));
+
+  return charData;
+}
