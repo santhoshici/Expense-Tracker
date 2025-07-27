@@ -1,3 +1,5 @@
+import moment from "moment";
+
 export const validateEmail = (email) => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(String(email).toLowerCase());
@@ -29,9 +31,22 @@ export const addSeperator = (num) => {
 
 export const prepareExpenseBarChartData = (data = []) => {
   const charData = data.map((item) => ({
+    month: moment(item?.date).format('Do MMM'),
     category: item?.category,
     amount: item?.amount
   }));
 
   return charData;
+}
+
+export const prepareIncomeBarChartData = (data = []) => {
+  const sortedData = [...data].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+  const chartData = sortedData.map((item) => ({
+    month: moment(item?.date).format('Do MMM'),
+    amount: item?.amount,
+    category: item?.source,
+  }));
+
+  return chartData;
 }
