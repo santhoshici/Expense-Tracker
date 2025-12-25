@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import CustomPieChart from '../Charts/CustomPieChart'
 
-const COLORS = ["#F66D44", "#FEAE65", "#64C2A6", "#2D87BB"]
+const COLORS = ["#41ca9b", "#80ecc7", "#44f7ba", "#2dd4bf"]
 
-const RecentIncomeWithChart = ({data, totalIncome}) => {
+const RecentIncomeWithChart = ({ data, totalIncome }) => {
 
-    const [chartData, setChartData]  =useState([]);
+    const [chartData, setChartData] = useState([]);
 
     const prepareChartData = () => {
         const dataArr = data?.map((item) => ({
@@ -19,7 +19,7 @@ const RecentIncomeWithChart = ({data, totalIncome}) => {
     useEffect(() => {
         prepareChartData();
 
-        return () => {};
+        return () => { };
     }, [data]);
 
     return (

@@ -8,6 +8,8 @@ import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import uploadImage from '../../utils/uploadImage';
 import { UserContext } from '../../context/UserContext';
+import { useTheme } from '../../context/ThemeContext';
+import { LuSun, LuMoon } from 'react-icons/lu';
 
 const SignUp = () => {
 
@@ -16,7 +18,8 @@ const SignUp = () => {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
 
-  const {updateUser} = useContext(UserContext);
+  const { updateUser } = useContext(UserContext);
+  const { theme, toggleTheme } = useTheme();
 
   const [error, setError] = React.useState('');
 
@@ -47,10 +50,10 @@ const SignUp = () => {
 
     // Sign Up API Call
 
-    try{
+    try {
 
       //Image Upload If Present
-      if(profilepic){
+      if (profilepic) {
         const imgUploadRes = await uploadImage(profilepic);
         profileImageUrl = imgUploadRes.imageUrl || "";
       }
@@ -62,17 +65,17 @@ const SignUp = () => {
         profileImageUrl
       });
 
-      const {token, user} = response.data;
+      const { token, user } = response.data;
 
-      if (token){
+      if (token) {
         localStorage.setItem("token", token);
         updateUser(user);
         navigate('/dashboard');
       }
-    }  catch (error) {
-      if(error.response && error.response.data.message){
+    } catch (error) {
+      if (error.response && error.response.data.message) {
         setError(error.response.data.message);
-      }else{
+      } else {
         setError("Something went wrong. Please try again later.");
         console.log(error);
       }
@@ -82,11 +85,18 @@ const SignUp = () => {
 
   return (
     <AuthLayout>
-      <div className="lg:w-[100%] h-auto md:h-full mt-10 md:mt-0 flex flex-col justify-center">
-        <h3 className="text-xl font-semibold text-black">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-foreground transition-colors z-50"
+      >
+        {theme === 'dark' ? <LuSun className="text-xl" /> : <LuMoon className="text-xl" />}
+      </button>
+
+      <div className="w-full">
+        <h3 className="text-2xl font-bold text-foreground tracking-tight">
           Create an Account
         </h3>
-        <p className="text-xs text-slate-700 mt-[5px] mb-6">
+        <p className="text-sm text-muted-foreground mt-2 mb-8">
           Start tracking your expenses today by entering your details below.
         </p>
 
@@ -116,19 +126,19 @@ const SignUp = () => {
                 label="Password"
                 placeholder="Min 6 characters"
                 type="password"
-              /> 
+              />
             </div>
           </div>
-          
+
           {error && <p className='text-red-500 text-xs pb-2.5'>{error}</p>}
 
           <button type='submit' className='btn-primary'>
             SIGN UP
           </button>
 
-          <p className='text-[13px] text-slate-800 mt-3'>
+          <p className='text-[13px] text-muted-foreground mt-3 text-center'>
             Already have an account?{" "}
-            <Link className="font-medium text-primary underline" to="/login">
+            <Link className="font-semibold text-primary hover:underline transition-all" to="/login">
               Login
             </Link>
           </p>

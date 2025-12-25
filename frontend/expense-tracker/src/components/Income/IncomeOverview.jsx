@@ -3,13 +3,13 @@ import { LuPlus } from 'react-icons/lu';
 import { prepareIncomeBarChartData } from '../../utils/helper';
 import CustomBarChart from '../Charts/CustomBarChart';
 
-const IncomeOverview = ({transactions, onAddIncome}) => {
+const IncomeOverview = ({ transactions, onAddIncome }) => {
     const [chartData, setChartData] = useState([]);
 
     useEffect(() => {
         const result = prepareIncomeBarChartData(transactions);
         setChartData(result);
-        return () => {};
+        return () => { };
     }, [transactions]);
     return <div className='card'>
         <div className='flex items-center justify-between'>
@@ -27,7 +27,7 @@ const IncomeOverview = ({transactions, onAddIncome}) => {
         </div>
 
         <div className='mt-10'>
-            <CustomBarChart data={chartData} />
+            <CustomBarChart data={chartData} primaryColor="#41ca9b" secondaryColor="#80ecc7" />
         </div>
     </div>
 }

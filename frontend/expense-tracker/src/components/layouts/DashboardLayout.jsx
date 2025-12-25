@@ -3,10 +3,10 @@ import { UserContext } from '../../context/UserContext';
 import Navbar from './Navbar';
 import SideMenu from './SideMenu';
 
-const DashboardLayout = ({children, activeMenu}) => {
-    const {user} = useContext(UserContext);
+const DashboardLayout = ({ children, activeMenu }) => {
+    const { user } = useContext(UserContext);
     return (
-        <div className="">
+        <div className="bg-background min-h-screen transition-colors duration-200">
             <Navbar activeMenu={activeMenu} />
 
             {user && (

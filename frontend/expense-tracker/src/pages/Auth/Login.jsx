@@ -6,13 +6,16 @@ import { validateEmail } from '../../utils/helper';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 import { UserContext } from '../../context/UserContext';
+import { useTheme } from '../../context/ThemeContext';
+import { LuSun, LuMoon } from 'react-icons/lu';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
 
-  const {updateUser} = useContext(UserContext);
+  const { updateUser } = useContext(UserContext);
+  const { theme, toggleTheme } = useTheme();
 
   const navigate = useNavigate();
 
@@ -55,15 +58,21 @@ const Login = () => {
     }
   }
 
-  // This return should be inside the Login component
   return (
     <AuthLayout>
-      <div className="lg:w-[70%] h-3/4 md:h-full flex flex-col justify-center">
-        <h3 className="text-xl font-semibold text-black">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted text-foreground transition-colors z-50"
+      >
+        {theme === 'dark' ? <LuSun className="text-xl" /> : <LuMoon className="text-xl" />}
+      </button>
+
+      <div className="w-full">
+        <h3 className="text-2xl font-bold text-foreground tracking-tight">
           Welcome Back
         </h3>
-        <p className="text-xs text-slate-700 mt-[5px] mb-6">
-          Please enter login credentials
+        <p className="text-sm text-muted-foreground mt-2 mb-8">
+          Please enter login credentials to access your account
         </p>
 
         <form onSubmit={handleLogin}>
@@ -74,7 +83,7 @@ const Login = () => {
             placeholder="example314@gmail.com"
             type="text"
           />
-          <Input 
+          <Input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             label="Password"
@@ -88,9 +97,9 @@ const Login = () => {
             LOGIN
           </button>
 
-          <p className='text-[13px] text-slate-800 mt-3'>
+          <p className='text-[13px] text-muted-foreground mt-3'>
             Don't have an account?{" "}
-            <Link className="font-medium text-primary underline" to="/signup">
+            <Link className="font-semibold text-primary hover:underline transition-all" to="/signup">
               SignUp
             </Link>
           </p>

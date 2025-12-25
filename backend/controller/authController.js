@@ -2,20 +2,20 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {expiresIn: '1h'});
+    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
 //Register user
 exports.registerUser = async (req, res) => {
-    const { fullName, email, password, profileImageUrl} = req.body;
-    if(!fullName || !email || !password) {
-        return res.status(400).json({message: "All fields are required"});
+    const { fullName, email, password, profileImageUrl } = req.body;
+    if (!fullName || !email || !password) {
+        return res.status(400).json({ message: "All fields are required" });
     }
-    try{
-        const existingUser = await User.findOne({email});
+    try {
+        const existingUser = await User.findOne({ email });
 
-        if(existingUser){
-            return res.status(400).json({message: "User already exists"});
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
         }
         const user = await User.create({
             fullName,
@@ -29,10 +29,10 @@ exports.registerUser = async (req, res) => {
             user,
             token: generateToken(user._id)
         });
-    } catch (err){
+    } catch (err) {
         res
             .status(500)
-            .json({message: "Error registering user", error: err.message});
+            .json({ message: "Error registering user", error: err.message });
     }
 }
 
@@ -40,13 +40,13 @@ exports.registerUser = async (req, res) => {
 //Login user
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
-    if(!email || !password) {
-        return res.status(400).json({message: "All fields are required"});
+    if (!email || !password) {
+        return res.status(400).json({ message: "All fields are required" });
     }
     try {
-        const user = await User.findOne({email});
-        if(!user) {
-            return res.status(400).json({message: "Invalid Credentials"});
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "Invalid Credentials" });
         }
 
         res.status(200).json({
@@ -57,7 +57,7 @@ exports.loginUser = async (req, res) => {
     } catch (err) {
         res
             .status(500)
-            .json({message: "Error registering user", error: err.message});
+            .json({ message: "Error registering user", error: err.message });
     }
 }
 
@@ -66,8 +66,8 @@ exports.loginUser = async (req, res) => {
 exports.getUserInfo = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("-password");
-        if(!user) {
-            return res.status(404).json({message: "User not found"});
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
         }
         res.status(200).json({
             message: "User info fetched successfully",
@@ -76,6 +76,17 @@ exports.getUserInfo = async (req, res) => {
     } catch (err) {
         res
             .status(500)
-            .json({message: "Error registering user", error: err.message});
+            .json({ message: "Error registering user", error: err.message });
+    }
+}
+//Get users count
+exports.getUsersCount = async (req, res) => {
+    try {
+        const count = await User.countDocuments();
+        res.status(200).json({ count });
+    } catch (err) {
+        res
+            .status(500)
+            .json({ message: "Error fetching user count", error: err.message });
     }
 }

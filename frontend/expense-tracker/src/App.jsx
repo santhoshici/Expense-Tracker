@@ -12,24 +12,28 @@ import SignUp from "./pages/Auth/SignUp";
 import Home from "./pages/Dashboard/Home";
 import Income from "./pages/Dashboard/Income";
 import Expense from "./pages/Dashboard/Expense";
+import LandingPage from "./pages/Auth/LandingPage";
 import UserProvider from './context/UserContext';
-import {Toaster} from "react-hot-toast";
+import { ThemeProvider } from './context/ThemeContext';
+import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
     <UserProvider>
-      <div>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Root />} />
-            <Route path="/login" exact element={<Login />} />
-            <Route path="/signup" exact element={<SignUp />} />
-            <Route path="/dashboard" exact element={<Home />} />
-            <Route path="/income" exact element={<Income />} />
-            <Route path="/expense" exact element={<Expense />} />
-          </Routes>
-        </Router>
-      </div>
+      <ThemeProvider>
+        <div>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Root />} />
+              <Route path="/login" exact element={<Login />} />
+              <Route path="/signup" exact element={<SignUp />} />
+              <Route path="/dashboard" exact element={<Home />} />
+              <Route path="/income" exact element={<Income />} />
+              <Route path="/expense" exact element={<Expense />} />
+            </Routes>
+          </Router>
+        </div>
+      </ThemeProvider>
 
       <Toaster
         toastOptions={{
@@ -46,11 +50,5 @@ const App = () => {
 export default App
 
 const Root = () => {
-  const isAuthenticated = !!localStorage.getItem('token');
-
-  return isAuthenticated ? (
-    <Navigate to="/dashboard" />
-  ) : (
-    <Navigate to="/login" />
-  );
+  return <LandingPage />;
 }
