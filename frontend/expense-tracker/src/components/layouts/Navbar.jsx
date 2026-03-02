@@ -14,7 +14,7 @@ const Navbar = ({ activeMenu }) => {
         <div className="flex justify-between items-center gap-5 bg-card border-b border-border backdrop-blur-[2px] py-4 px-7 sticky top-0 z-30 transition-colors duration-200">
             <div className="flex items-center gap-2">
                 <button
-                    className='block lg:hidden text-foreground'
+                    className='max-[1080px]:block hidden text-foreground'
                     onClick={() => {
                         setOpenSideMenu(!openSideMenu);
                     }}
