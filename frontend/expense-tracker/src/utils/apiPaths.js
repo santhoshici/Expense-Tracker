@@ -27,4 +27,10 @@ export const API_PATHS = {
     IMAGE: {
         UPLOAD_IMAGE: "/api/v1/auth/upload-image",
     },
+    AI: {
+        CATEGORIZE: "/api/v1/ai/categorize",
+        ANOMALY: "/api/v1/ai/anomaly",
+        QUERY: "/api/v1/ai/query",
+        HEALTH: "/api/v1/ai/health",
+    },
 };
