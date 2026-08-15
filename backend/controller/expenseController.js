@@ -23,7 +23,8 @@ exports.addExpense = async (req, res) => {
         await newExpense.save();
         res.status(200).json(newExpense);
     } catch (err){
-        res.status(500).json({ message: "Server error"});
+        console.error("[Expense Error] Add expense failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
@@ -35,7 +36,8 @@ exports.getAllExpense = async (req, res) => {
         const expense = await Expense.find({userId}).sort({date: -1});
         res.json(expense);
     } catch (err) {
-        res.status(500).json({ message: "Server error" });
+        console.error("[Expense Error] Get all expense failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
@@ -45,7 +47,8 @@ exports.deleteExpense = async (req, res) => {
         await Expense.findByIdAndDelete(req.params.id);
         res.json({ message: "Expense category deleted successfully" });  
     }catch (err) { 
-        res.status(500).json({ message: "Server error" });
+        console.error("[Expense Error] Delete expense failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
@@ -68,6 +71,7 @@ exports.downloadExpenseExcel = async (req, res) => {
         xlsx.writeFile(wb, "expense_details.xlsx");
         res.download("expense_details.xlsx");
     }catch (err) {
-        res.status(500).json({ message: "Server error" });  
+        console.error("[Expense Error] Download expense excel failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });  
     }
 }

@@ -25,24 +25,29 @@ axiosInstance.interceptors.request.use(
     }
 );
 
-//Response Interceptor
-
+// Response Interceptor
 axiosInstance.interceptors.response.use(
     (response) => {
         return response;
     },
     (error) => {
         if (error.response) {
-            if (error.response.status === 401) {
-                //Redirect to login page
-                window.location.href = "/login";
-            }else if (error.response.status === 500){
-                console.error("Server Error Please try again later.");
+            const { status, data, config } = error.response;
+            console.error(`[API Error] ${config?.method?.toUpperCase()} ${config?.url} [Status ${status}]:`, data?.message || data || error.message);
+            if (status === 401) {
+                // Redirect to login page if token is invalid or expired
+                if (window.location.pathname !== "/login") {
+                    localStorage.removeItem("token");
+                    window.location.href = "/login";
+                }
             }
-        }else if(error.code=== 'ECONNABORTED'){
-            console.error("Request timed out. Please try again.");
+        } else if (error.code === 'ECONNABORTED') {
+            console.error(`[API Timeout] Request timed out for ${error.config?.url}. Please try again.`);
+        } else {
+            console.error(`[API Network Error] Could not connect to backend server:`, error.message);
         }
         return Promise.reject(error);
-    });
+    }
+);
 
 export default axiosInstance;

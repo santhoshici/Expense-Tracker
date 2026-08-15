@@ -23,7 +23,8 @@ exports.addIncome = async (req, res) => {
         await newIncome.save();
         res.status(200).json(newIncome);
     } catch (err){
-        res.status(500).json({ message: "Server error"});
+        console.error("[Income Error] Add income failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
@@ -35,7 +36,8 @@ exports.getAllIncome = async (req, res) => {
         const income = await Income.find({userId}).sort({date: -1});
         res.json(income);
     } catch (err) {
-        res.status(500).json({ message: "Server error" });
+        console.error("[Income Error] Get all income failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
@@ -45,13 +47,14 @@ exports.deleteIncome = async (req, res) => {
         await Income.findByIdAndDelete(req.params.id);
         res.json({ message: "Income source deleted successfully" });  
     }catch (err) { 
-        res.status(500).json({ message: "Server error" });
+        console.error("[Income Error] Delete income failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 }
 
 //Download Income Sources as Excel
 exports.downloadIncomeExcel = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user._id;
     try{
         const income = await Income.find({userId}).sort({date: -1});
 
@@ -68,6 +71,7 @@ exports.downloadIncomeExcel = async (req, res) => {
         xlsx.writeFile(wb, "income_details.xlsx");
         res.download("income_details.xlsx");
     }catch (err) {
-        res.status(500).json({ message: "Server error" });  
+        console.error("[Income Error] Download income excel failed:", err);
+        res.status(500).json({ message: "Server error", error: err.message });  
     }
 }

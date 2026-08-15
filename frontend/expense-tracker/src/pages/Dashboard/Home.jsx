@@ -9,7 +9,7 @@ import { SkeletonCard } from '../../utils/skeleton';
 import { cacheGet, cacheSet } from '../../utils/offlineCache';
 import { useUIStore, uiStore } from '../../store/useUIStore';
 
-import { LuHandCoins, LuWalletMinimal, LuAlertTriangle, LuX } from 'react-icons/lu';
+import { LuHandCoins, LuWalletMinimal, LuTriangleAlert, LuX } from 'react-icons/lu';
 import { IoMdCard } from "react-icons/io"
 import { addSeperator } from '../../utils/helper';
 import RecentTransactions from '../../components/Dashboard/RecentTransactions';
@@ -81,7 +81,7 @@ const Home = () => {
         {anomalyAlert && !isDismissed && (
           <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-200 animate-fadeIn">
             <div className="flex items-center gap-3">
-              <LuAlertTriangle className="text-2xl text-amber-400 shrink-0" />
+              <LuTriangleAlert className="text-2xl text-amber-400 shrink-0" />
               <div>
                 <p className="font-semibold text-sm text-amber-100">
                   Spending Anomaly Detected ({anomalyAlert.pctAboveMean}% higher than usual)

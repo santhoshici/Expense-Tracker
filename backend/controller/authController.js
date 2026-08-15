@@ -30,12 +30,10 @@ exports.registerUser = async (req, res) => {
             token: generateToken(user._id)
         });
     } catch (err) {
-        res
-            .status(500)
-            .json({ message: "Error registering user", error: err.message });
+        console.error("[Auth Error] Registration failed:", err);
+        res.status(500).json({ message: "Error registering user", error: err.message });
     }
 }
-
 
 //Login user
 exports.loginUser = async (req, res) => {
@@ -49,18 +47,21 @@ exports.loginUser = async (req, res) => {
             return res.status(400).json({ message: "Invalid Credentials" });
         }
 
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid Credentials" });
+        }
+
         res.status(200).json({
             id: user._id,
             user,
             token: generateToken(user._id)
         });
     } catch (err) {
-        res
-            .status(500)
-            .json({ message: "Error registering user", error: err.message });
+        console.error("[Auth Error] Login failed:", err);
+        res.status(500).json({ message: "Error logging in user", error: err.message });
     }
 }
-
 
 //Get user info
 exports.getUserInfo = async (req, res) => {
@@ -74,19 +75,18 @@ exports.getUserInfo = async (req, res) => {
             user
         });
     } catch (err) {
-        res
-            .status(500)
-            .json({ message: "Error registering user", error: err.message });
+        console.error("[Auth Error] Get user info failed:", err);
+        res.status(500).json({ message: "Error fetching user info", error: err.message });
     }
 }
+
 //Get users count
 exports.getUsersCount = async (req, res) => {
     try {
         const count = await User.countDocuments();
         res.status(200).json({ count });
     } catch (err) {
-        res
-            .status(500)
-            .json({ message: "Error fetching user count", error: err.message });
+        console.error("[Auth Error] Get users count failed:", err);
+        res.status(500).json({ message: "Error fetching user count", error: err.message });
     }
 }

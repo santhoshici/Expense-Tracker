@@ -11,6 +11,8 @@ const expenseRoutes = require("./routes/expenseRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 
+const { requestLogger, errorHandler } = require("./middleware/loggerMiddleware");
+
 app.use(
     cors({
         origin: process.env.CLIENT_URL || "*",
@@ -20,6 +22,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(requestLogger);
 app.use("/api/v1", restRateLimiter);
 
 connectDB();
@@ -30,8 +33,10 @@ app.use("/api/v1/expense", expenseRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 app.use("/api/v1/ai", aiRoutes);
 
-
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); 
+
+// Central error handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
