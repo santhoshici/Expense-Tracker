@@ -16,9 +16,9 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 ---
 
 ## 📸 Screenshots
-| Dashboard | Income | Expense | AI Copilot |
+| Dashboard | Income | Expense |
 |---|---|---|---|
-| ![Dashboard](SS_Dashboard1.png) | ![Income](SS_Income.png) | ![Expense](SS_Expense.png) | ![AI Copilot](SS_AI_Copilot.png) |
+| ![Dashboard](SS_Dashboard1.png) | ![Income](SS_Income.png) | ![Expense](SS_Expense.png) | 
 
 ---
 
