@@ -216,40 +216,6 @@ uvicorn main:app --reload --port 8000
 
 ---
 
-## Environment Variables
-
-### Backend (`backend/.env`)
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PORT` | No | `8000` | Server port (Render injects `$PORT`) |
-| `MONGO_URI` | **Yes** | — | MongoDB Atlas connection string |
-| `JWT_SECRET` | **Yes** | — | `openssl rand -hex 32` |
-| `CLIENT_URL` | No | `*` | Frontend origin for CORS |
-| `GEMINI_API_KEY` | No | — | Google AI Studio key; empty → rule fallback |
-| `AI_DAILY_QUOTA` | No | `10` | Per-user daily AI query limit |
-| `REDIS_URL` | No | — | Upstash Redis; empty → in-memory fallback |
-| `ML_SERVICE_URL` | No | — | FastAPI ML service URL; empty → skip |
-| `NODE_ENV` | No | `development` | `production` on Render |
-
-### Frontend (`frontend/expense-tracker/.env`)
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `VITE_API_BASE_URL` | **Yes** | `http://localhost:8000` | Backend API base URL (baked at build time) |
-
-> See `backend/.env.example` and `frontend/expense-tracker/.env.example` for templates.
-
----
-
-## Deploy to Render (Free Tier)
-**Complete step-by-step workbook:** → [`DEPLOY_TO_RENDER.md`](DEPLOY_TO_RENDER.md)
-
-Deploys 3 services for **$0/month**:
-- Backend Web Service (Node)
-- Frontend Static Site (Vite build)
-- Optional ML Web Service (Python/FastAPI)
-
----
-
 ## API Reference (Key Endpoints)
 
 ### Auth
@@ -322,10 +288,7 @@ npm run build   # exits 0 if clean
 
 ---
 
-## License
-ISC — see `backend/package.json`.
 
----
 
 ## Author
 **Santhosh Kumar**  
