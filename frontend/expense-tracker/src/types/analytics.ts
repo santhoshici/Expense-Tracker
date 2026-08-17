@@ -1,4 +1,4 @@
-﻿export type ChartType = 'bar' | 'line' | 'pie' | 'metric_card' | 'table'
+export type ChartType = 'bar' | 'line' | 'pie' | 'metric_card' | 'table'
 
 export interface SummaryMetrics {
   totalAmount?: number
@@ -24,17 +24,14 @@ export interface AgentEvent {
   error?: string
 }
 
+// Must stay in sync with backend/ml/categorizer.py STANDARD_CATEGORIES.
 export const STANDARD_CATEGORIES = [
-  'Food & Dining',
+  'Food',
   'Housing',
-  'Transportation',
   'Utilities',
-  'Healthcare',
-  'Shopping',
   'Entertainment',
-  'Travel',
-  'Education',
-  'Other',
+  'Healthcare',
+  'Transport',
+  'Investment',
+  'Salary',
 ] as const
-
-export type StandardCategory = (typeof STANDARD_CATEGORIES)[number]

@@ -1,5 +1,14 @@
-const User = require('../models/User');
+﻿const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { isDBConnected } = require('../config/db');
+
+const requireDB = (res) => {
+    if (!isDBConnected()) {
+        res.status(503).json({ message: 'Database is temporarily unavailable. Please try again later.' });
+        return false;
+    }
+    return true;
+};
 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -7,6 +16,7 @@ const generateToken = (id) => {
 
 //Register user
 exports.registerUser = async (req, res) => {
+    if (!requireDB(res)) return;
     const { fullName, email, password, profileImageUrl } = req.body;
     if (!fullName || !email || !password) {
         return res.status(400).json({ message: "All fields are required" });
@@ -37,6 +47,7 @@ exports.registerUser = async (req, res) => {
 
 //Login user
 exports.loginUser = async (req, res) => {
+    if (!requireDB(res)) return;
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: "All fields are required" });
@@ -82,6 +93,7 @@ exports.getUserInfo = async (req, res) => {
 
 //Get users count
 exports.getUsersCount = async (req, res) => {
+    if (!requireDB(res)) return;
     try {
         const count = await User.countDocuments();
         res.status(200).json({ count });

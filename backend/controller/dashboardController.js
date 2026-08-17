@@ -1,4 +1,4 @@
-const Income = require("../models/Income");
+﻿const Income = require("../models/Income");
 const Expense = require("../models/Expense");
 const {isValidObjectId, Types} = require("mongoose");
 
@@ -64,6 +64,13 @@ exports.getDashboardData = async (req, res) => {
         ),
     ].sort((a, b) => b.date - a.date);
 
+    // Fetch recent anomalies (up to 5)
+    const anomalies = await Expense.find({ userId, isAnomaly: true })
+        .sort({ date: -1 })
+        .limit(5)
+        .select("_id category amount date anomalyReason")
+        .lean();
+
     //Final Response
     res.json({
         totalBalance:
@@ -79,6 +86,7 @@ exports.getDashboardData = async (req, res) => {
                 transactions: last60DaysIncomeTransactions,
             },
             recentTransactions: last5Transactions,
+            anomalies,
         });
     } catch (err){
         console.error("Error in route:", err);

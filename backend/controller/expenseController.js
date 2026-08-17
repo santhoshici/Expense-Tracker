@@ -1,5 +1,57 @@
-const xlsx = require("xlsx");
+﻿const xlsx = require("xlsx");
 const Expense = require("../models/Expense");
+
+// ─────────────────────────────────────────────────────────────
+// SELF-CONTAINED ANOMALY HELPER
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the user's last 90 days of expenses in the same category (capped at 200)
+ * and decide whether the given amount is anomalous versus that history.
+ * Returns { isAnomaly, anomalyReason }. Never throws.
+ */
+async function checkAnomalyForExpense(userId, category, amount) {
+    try {
+        const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+        const history = await Expense.find({ userId, category, date: { $gte: since } })
+            .select("amount")
+            .limit(200)
+            .lean();
+
+        const amounts = history.map((h) => Number(h.amount)).filter((n) => !isNaN(n));
+
+        // Need at least 4 historical points to establish a baseline.
+        if (amounts.length < 4) {
+            return { isAnomaly: false, anomalyReason: "" };
+        }
+
+        const mean = amounts.reduce((a, b) => a + b, 0) / amounts.length;
+        const variance = amounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (amounts.length - 1);
+        const stdDev = Math.sqrt(variance) || 1;
+        const zScore = (Number(amount) - mean) / stdDev;
+
+        const sorted = [...amounts].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 === 0
+            ? (sorted[mid - 1] + sorted[mid]) / 2
+            : sorted[mid];
+
+        const isAnomaly = zScore > 2.5 || (median > 0 && Number(amount) > 3 * median);
+
+        if (!isAnomaly) {
+            return { isAnomaly: false, anomalyReason: "" };
+        }
+
+        const pct = mean > 0 ? Math.round(((Number(amount) - mean) / mean) * 100) : 0;
+        return {
+            isAnomaly: true,
+            anomalyReason: `${pct}% higher than your average spend in ${category}`,
+        };
+    } catch (err) {
+        console.error("[Expense Error] Anomaly check failed:", err);
+        return { isAnomaly: false, anomalyReason: "" };
+    }
+}
 
 //Add Expense category
 exports.addExpense = async (req, res) => {
@@ -19,6 +71,20 @@ exports.addExpense = async (req, res) => {
             amount,
             date: new Date(date)
         });
+
+        // Run anomaly detection against the user's recent category history.
+        // Guard so a failed check never blocks the save.
+        try {
+            const { isAnomaly, anomalyReason } = await checkAnomalyForExpense(userId, category, amount);
+            newExpense.isAnomaly = isAnomaly;
+            newExpense.anomalyReason = anomalyReason;
+            newExpense.anomalyCheckedAt = new Date();
+        } catch (anomalyErr) {
+            console.error("[Expense Error] Anomaly check skipped:", anomalyErr);
+            newExpense.isAnomaly = false;
+            newExpense.anomalyReason = "";
+            newExpense.anomalyCheckedAt = new Date();
+        }
 
         await newExpense.save();
         res.status(200).json(newExpense);
