@@ -119,18 +119,67 @@ function getRedis() {
   if (process.env.REDIS_URL) {
     try {
       const Redis = require('ioredis');
-      const client = new Redis(process.env.REDIS_URL, { lazyConnect: false });
+      // maxRetriesPerRequest: 1 ensures that if Redis is unreachable,
+      // commands fail fast (after 1 retry) instead of hanging for 20
+      // retries on every single request.
+      const client = new Redis(process.env.REDIS_URL, {
+        lazyConnect: false,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 5000,
+      });
+
+      // Track connection state so we can fall back to in-memory store
+      // when Redis is down (avoids spamming MaxRetriesPerRequest errors).
+      let redisReady = false;
+      client.on('ready', () => { redisReady = true; });
+      client.on('end', () => { redisReady = false; });
+      client.on('reconnecting', () => { redisReady = false; });
       client.on('error', () => {});
+
+      // Wrapper that falls back to in-memory store when Redis is down.
+      function fallback() {
+        if (!memoryStore) {
+          console.warn('⚠️ Redis unreachable — falling back to in-memory rate limiter (per-process only).');
+          memoryStore = createMemoryStore();
+        }
+        return memoryStore;
+      }
+
       redisClient = {
         async eval(script, keys, args) {
-          const res = await client.eval(script, keys.length, ...keys, ...args);
-          return res;
+          if (!redisReady) return fallback().eval(script, keys, args);
+          try {
+            return await client.eval(script, keys.length, ...keys, ...args);
+          } catch {
+            redisReady = false;
+            return fallback().eval(script, keys, args);
+          }
         },
-        async get(key) { return client.get(key); },
-        async set(key, value, options) { return client.set(key, value, options); },
-        async del(key) { return client.del(key); },
-        async incr(key) { return client.incr(key); },
-        async expire(key, seconds) { return client.expire(key, seconds); },
+        async get(key) {
+          if (!redisReady) return fallback().get(key);
+          try { return await client.get(key); }
+          catch { redisReady = false; return fallback().get(key); }
+        },
+        async set(key, value, options) {
+          if (!redisReady) return fallback().set(key, value, options);
+          try { return await client.set(key, value, options); }
+          catch { redisReady = false; return fallback().set(key, value, options); }
+        },
+        async del(key) {
+          if (!redisReady) return fallback().del(key);
+          try { return await client.del(key); }
+          catch { redisReady = false; return fallback().del(key); }
+        },
+        async incr(key) {
+          if (!redisReady) return fallback().incr(key);
+          try { return await client.incr(key); }
+          catch { redisReady = false; return fallback().incr(key); }
+        },
+        async expire(key, seconds) {
+          if (!redisReady) return fallback().expire(key, seconds);
+          try { return await client.expire(key, seconds); }
+          catch { redisReady = false; return fallback().expire(key, seconds); }
+        },
         async close() { await client.quit(); redisClient = null; },
       };
       return redisClient;

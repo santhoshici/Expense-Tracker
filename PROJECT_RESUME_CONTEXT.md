@@ -35,13 +35,100 @@ This branch focuses only on the expense tracking product. It does not include th
 - xlsx for Excel report generation
 - dotenv for environment variables
 - CORS middleware
+- **ioredis** for distributed rate limiting (with in-memory token-bucket fallback)
+- **@google/generative-ai** (Gemini 3.6 Flash) for AI-powered financial copilot
+- Custom query sanitizer for MongoDB pipeline injection protection
+
+### AI/ML Layer
+
+- **Gemini 3.6 Flash** (Google Generative AI SDK) for natural-language financial queries
+- **Rule-based fallback engine** — works without API key, parses keywords and builds MongoDB aggregation pipelines
+- **Auto-categorization** — keyword scoring predicts expense categories
+- **Anomaly detection** — z-score + 3× median rule flags outlier expenses
+- **Optional Python FastAPI microservice** — TF-IDF categorizer + IsolationForest (backend falls back gracefully if unavailable)
+
+### Rate Limiting & Caching
+
+- **Redis (Upstash)** — distributed token-bucket rate limiting via Lua scripts
+- **In-memory fallback** — per-process token bucket when Redis is unreachable
+- **Connection-state tracking** — `ready`/`end`/`reconnecting` events prevent retry storms
+- **`maxRetriesPerRequest: 1`** — commands fail fast instead of hanging for 20 retries
 
 ### Database
 
 - MongoDB / MongoDB Atlas
-- Mongoose models for users, income records, and expense records
+- Mongoose models for users, income records, expense records, and AI quota tracking
+- Collections: `users`, `incomes`, `expenses`, `useraiquotas`
 
 ## Core Features
+
+## Expense Copilot (AI Financial Assistant)
+
+The app includes a Gemini-powered AI copilot that understands natural language questions about the user's finances and renders interactive charts.
+
+Implemented behavior:
+
+- Floating chat panel accessible from all dashboard pages (bottom-right).
+- **Theme-aware**: adapts to light/dark mode automatically (uses Tailwind CSS semantic classes, not hardcoded colors).
+- Natural language → MongoDB aggregation pipeline → chart-ready JSON.
+- Multi-turn conversation memory (last 5 turns sent as context to Gemini).
+- Chat history persisted to `localStorage` per user.
+- Structured JSON response with `explanation`, `chartType`, `chartTitle`, `data[]`, and `summaryMetrics`.
+- Dynamic chart rendering (bar, line, pie) via `DynamicChartRenderer` component.
+- Rule-based fallback engine when `GEMINI_API_KEY` is missing or Gemini fails.
+- Every generated pipeline is sanitized (`QuerySanitizer`); forbidden stages (`$out`, `$merge`, `$unionWith`) are rejected, and `userId` match is forced.
+- Per-user daily AI quota tracking (`UserAIQuota` model with TTL index).
+
+Relevant files:
+
+- `backend/controller/aiController.js` — AI endpoints (query, categorize, anomaly, health)
+- `backend/src/services/geminiService.js` — Gemini 3.6 Flash integration + rule fallback
+- `backend/src/services/querySanitizer.js` — MongoDB pipeline injection protection
+- `backend/src/services/redisService.js` — thin Redis cache wrapper
+- `backend/models/UserAIQuota.js` — daily AI quota tracking
+- `backend/routes/aiRoutes.js` — AI API routes with rate limiting
+- `frontend/expense-tracker/src/components/AI/AnalyticsChatbot.jsx` — chat UI
+- `frontend/expense-tracker/src/components/AI/DynamicChartRenderer.jsx` — JSON-driven Recharts renderer
+- `frontend/expense-tracker/src/components/AI/AgentStateBadge.jsx` — loading state badge
+- `frontend/expense-tracker/src/types/analytics.ts` — TypeScript types for AI response
+
+## Rate Limiting
+
+Tiered token-bucket rate limiting with Redis and in-memory fallback.
+
+Implemented behavior:
+
+- REST API: 100 requests/min per user/IP.
+- AI endpoints: 10 requests/min + 100 requests/day per user.
+- Token-bucket algorithm implemented in Lua (atomic Redis execution).
+- In-memory fallback when Redis is unreachable (per-process only).
+- Connection state tracking via `ready`/`end`/`reconnecting` events.
+- `maxRetriesPerRequest: 1` ensures fast failure instead of 20-retry hangs.
+- 429 response includes `retryAfterSeconds`, `limit`, and `remaining`.
+
+Relevant files:
+
+- `backend/src/config/redis.js` — ioredis client + in-memory Map fallback + Lua script
+- `backend/src/middleware/rateLimiter.js` — tiered token-bucket middleware
+
+## Auto-Categorization & Anomaly Detection
+
+Implemented behavior:
+
+- When a user adds an expense without a category, the backend predicts one from description + amount.
+- Confidence threshold: ≥ 0.65 uses predicted category, else "Uncategorized / Review Required".
+- On every expense add, computes z-score vs last 90 days of same-category spend.
+- Flags as anomaly if `z > 2.5` or `amount > 3× median`.
+- Anomaly fields persisted: `isAnomaly`, `anomalyReason`, `anomalyCheckedAt`.
+- Optional Python FastAPI microservice for TF-IDF + IsolationForest (backend calls with 2s timeout, falls back silently).
+
+Relevant files:
+
+- `backend/controller/expenseController.js` — auto-categorize + anomaly check on add
+- `backend/controller/aiController.js` — categorize and anomaly API endpoints
+- `backend/ml/categorizer.py` — keyword + TF-IDF categorizer
+- `backend/ml/anomaly_detector.py` — z-score + IsolationForest
+- `backend/ml/main.py` — FastAPI app
 
 ## Authentication
 
@@ -241,11 +328,17 @@ Backend flow:
 
 Backend structure:
 
-- `config/db.js` connects to MongoDB.
-- `models` contains User, Income, and Expense schemas.
+- `config/db.js` connects to MongoDB (includes DNS proxy detection and override for local VPN/ad-blocker setups).
+- `src/config/redis.js` — ioredis client + in-memory Map fallback + Lua token-bucket script.
+- `src/middleware/rateLimiter.js` — tiered rate limiting (REST, AI, AI-daily).
+- `src/services/geminiService.js` — Gemini 3.6 Flash integration with rule-based fallback.
+- `src/services/querySanitizer.js` — MongoDB pipeline sanitization + userId injection.
+- `src/services/redisService.js` — thin Redis cache wrapper.
+- `models` contains User, Income, Expense, and UserAIQuota schemas.
 - `routes` defines API endpoints.
-- `controller` contains endpoint handlers.
-- `middleware` contains auth and upload middleware.
+- `controller` contains endpoint handlers (including `aiController.js` for AI endpoints).
+- `middleware` contains auth, upload, and logger middleware.
+- `ml` contains optional Python FastAPI microservice.
 
 ## API Summary
 
@@ -272,10 +365,19 @@ Base API path: `/api/v1`
 
 ### Expense
 
-- `POST /expense/add` - add expense
-- `GET /expense/get` - get authenticated user's expense records
+- `POST /expense/add` - add expense (auto-categorizes if category missing, runs anomaly check)
+- `GET /expense/get` - get authenticated user's expense records (includes `isAnomaly`, `anomalyReason`)
 - `DELETE /expense/:id` - delete expense
 - `GET /expense/downloadexcel` - download expense Excel report
+
+### AI / ML
+
+- `GET /ai/health` - AI engine status (no auth required)
+- `POST /ai/categorize` - predict expense category from description + amount
+- `POST /ai/anomaly` - check if an expense is an anomaly
+- `POST /ai/query` - natural language financial query → structured JSON with chart data
+
+Rate limits: AI endpoints are limited to 10 req/min + 100 req/day per user.
 
 ## Data Models
 
@@ -305,8 +407,18 @@ Base API path: `/api/v1`
 - `category`
 - `amount`
 - `date`
+- `isAnomaly` (boolean, set by anomaly detection)
+- `anomalyReason` (string, explanation if flagged)
+- `anomalyCheckedAt` (date, when anomaly check ran)
 - `createdAt`
 - `updatedAt`
+
+### UserAIQuota
+
+- `userId`
+- `date` (string, YYYY-MM-DD)
+- `count` (number of AI queries today)
+- TTL index expires documents after 48 hours
 
 ## Architecture Explanation for Interviews
 
@@ -316,15 +428,22 @@ The dashboard is calculated mostly on the backend. The API aggregates income and
 
 ## Strong Resume Bullets
 
-- Developed a full-stack MERN expense tracker with authenticated income and expense management, dashboard analytics, chart visualizations, and Excel export workflows.
+- Developed a full-stack MERN expense tracker with authenticated income and expense management, dashboard analytics, chart visualizations, Excel export, and a Gemini-powered AI copilot.
 - Designed REST APIs with Express and MongoDB/Mongoose for user-scoped financial records protected by JWT middleware.
-- Built a React/Vite frontend with reusable dashboard layouts, modals, cards, forms, chart components, toast notifications, and responsive Tailwind styling.
+- Built a React/Vite frontend with reusable dashboard layouts, modals, cards, forms, chart components, toast notifications, and responsive Tailwind CSS v4 theming (light/dark mode).
 - Implemented MongoDB aggregation logic to calculate total income, total expenses, current balance, recent transactions, and time-windowed financial insights.
 - Created income and expense CRUD workflows with frontend validation, authenticated backend persistence, and date-sorted transaction lists.
 - Implemented server-side Excel report generation with the `xlsx` package and client-side blob downloads for financial records.
 - Added profile image upload support using Multer with static file serving through Express.
 - Centralized API route definitions and Axios interceptors to simplify authenticated frontend-backend communication.
 - Built dashboard visualizations using Recharts to help users understand income, expense, and balance trends.
+- Integrated Google Gemini 3.6 Flash for natural-language financial queries with multi-turn conversation memory and dynamic chart rendering.
+- Implemented a rule-based fallback engine that builds MongoDB aggregation pipelines from keyword parsing when the Gemini API is unavailable.
+- Built a tiered token-bucket rate limiter using Redis (Lua scripts) with automatic in-memory fallback and connection-state tracking.
+- Added auto-categorization and real-time anomaly detection (z-score + 3× median rule) on expense creation.
+- Secured AI-generated MongoDB pipelines with a custom query sanitizer that rejects dangerous stages (`$out`, `$merge`, `$unionWith`) and forces `userId` scoping.
+- Implemented DNS proxy detection and override for MongoDB Atlas SRV lookups (handles local VPN/ad-blocker DNS configurations).
+- Made the AI copilot UI fully theme-aware (light/dark mode) using Tailwind CSS semantic classes instead of hardcoded colors.
 
 ## Short Project Pitch
 
@@ -361,7 +480,31 @@ These are useful if an interviewer asks what you would improve next:
 - Add budget categories, monthly spending limits, and recurring transaction support.
 - Add more robust deployment documentation and environment variable examples.
 
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | Yes | JWT signing secret (`openssl rand -hex 32`) |
+| `CLIENT_URL` | No | Frontend origin for CORS |
+| `GEMINI_API_KEY` | No | Google AI Studio key; empty → rule-based fallback |
+| `AI_DAILY_QUOTA` | No | Per-user daily AI query limit (default: 10) |
+| `REDIS_URL` | No | Upstash Redis URL; empty → in-memory fallback |
+| `ML_SERVICE_URL` | No | FastAPI ML service URL; empty → skip |
+| `PORT` | No | Server port (default: 8000) |
+| `NODE_ENV` | No | `development` or `production` |
+
+### Frontend (`frontend/expense-tracker/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_BASE_URL` | Yes | Backend API base URL (baked at build time) |
+
+> `.env` files are gitignored and not tracked. Templates are in `.env.example`.
+
 ## Keywords for Resume or LinkedIn
 
-MERN Stack, React, Vite, Node.js, Express.js, MongoDB, Mongoose, JWT, REST API, Tailwind CSS, Recharts, Axios, Excel Export, Dashboard Analytics, CRUD, Authentication, Multer, Full-Stack Development, Personal Finance App.
+MERN Stack, React, Vite, Node.js, Express.js, MongoDB, Mongoose, JWT, REST API, Tailwind CSS v4, Recharts, Axios, Excel Export, Dashboard Analytics, CRUD, Authentication, Multer, Full-Stack Development, Personal Finance App, Google Gemini, Generative AI, Redis, Rate Limiting, Token Bucket, Anomaly Detection, Auto-Categorization, DNS Resolution, In-Memory Fallback, Query Sanitization.
 

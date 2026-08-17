@@ -133,7 +133,7 @@ After all three services exist, go back and set:
    - *"Show me a bar chart of my expenses grouped by category"*
    - *"Compare my total income vs total expenses"*
    - *"Show me the last 5 transactions"*
-3. Hit the backend health endpoint: `GET https://<backend>/api/v1/ai/health` → should return `{"status":"online", "engine":"gemini-2.0-flash"|"rule-based-fallback", ...}`.
+3. Hit the backend health endpoint: `GET https://<backend>/api/v1/ai/health` → should return `{"status":"online", "engine":"gemini-3.6-flash"|"rule-based-fallback", ...}`.
 
 ---
 
@@ -163,6 +163,6 @@ After all three services exist, go back and set:
 
 ## 🔐 Security reminder
 
-- `backend/.env` and `frontend/expense-tracker/.env` are **gitignored**. Never commit real secrets.
-- The repo's committed `backend/.env` currently contains a real `MONGO_URI`/`JWT_SECRET`. **Rotate them** before any public deploy: create a new Atlas DB user + new `JWT_SECRET` (`openssl rand -hex 32`), and purge the old values from git history if the repo is/was public.
+- `backend/.env` and `frontend/expense-tracker/.env` are **gitignored** and not tracked in git. Never commit real secrets.
 - Use **Render's encrypted environment variables** (not files) for all secrets in production.
+- If you previously committed a `.env` with secrets, **rotate them**: create a new Atlas DB user + new `JWT_SECRET` (`openssl rand -hex 32`), and purge old values from git history.

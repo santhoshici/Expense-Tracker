@@ -35,14 +35,14 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 - **Express 5** + **Mongoose 8** (MongoDB Atlas)
 - **JWT** auth + **bcryptjs** password hashing
 - **ioredis** + **in-memory token-bucket fallback** for distributed rate limiting (RULE 2)
-- **@google/generative-ai** (Gemini 2.0 Flash) with **rule-based fallback** — no hard dependency on API key
+- **@google/generative-ai** (Gemini 3.6 Flash) with **rule-based fallback** — no hard dependency on API key
 - **Zod-free** validation (custom, zero-dep) — keeps install surface minimal
 - **Multer** (profile images), **xlsx** (Excel export)
 
 ### AI/ML Layer
 | Component | Tech | Purpose |
 |---|---|---|
-| **Copilot (Node)** | Gemini 2.0 Flash + deterministic fallback | Text → MongoDB aggregation pipeline, chart spec JSON, SSE streaming |
+| **Copilot (Node)** | Gemini 3.6 Flash + deterministic fallback | Text → MongoDB aggregation pipeline, chart spec JSON |
 | **Categorizer (Python)** | FastAPI + scikit-learn TF-IDF (optional) | Zero-shot keyword scoring → 8 standard categories |
 | **Anomaly Detector (Python/Node)** | Statistical z-score + 3×median rule + IsolationForest (optional) | Flags outliers in real-time on expense creation |
 | **Text-to-Query** | Heuristic parser + LLM-structured output | Converts "food vs entertainment last 3 months" → safe Mongo pipeline |
@@ -71,22 +71,19 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 - Category breakdowns (bar/pie)
 - **Anomaly feed**: recent flagged transactions surfaced in `GET /api/v1/dashboard` → renders as `AnomalyAlertBanner`
 
-### 🤖 AI Financial Copilot (RULE 3, 5)
+### 🤖 Expense Copilot (RULE 3, 5)
 - **Floating chat panel** on all dashboard pages
+- **Theme-aware**: adapts to light/dark mode automatically
 - **Natural language → chart**: "Show me a bar chart of food vs entertainment over the last 3 months"
 - **Structured JSON response** (`AIAnalyticsResponse`): `explanation`, `generatedQuery`, `chartType`, `chartTitle`, `xAxisKey`, `yAxisKey`, `data[]`, `summaryMetrics`
-- **SSE streaming** with explicit agent states:
-  ```
-  event: agent_state  → "Parsing query..."
-  event: agent_state  → "Generating safe query..."
-  event: agent_state  → "Executing aggregation..."
-  event: agent_data   → { explanation, chartType, data, ... }
-  ```
+- **Multi-turn memory**: preserves last 5 conversation turns for context-aware follow-up questions
+- **Chat persistence**: history saved to `localStorage` per user
 - **Fallback**: if `GEMINI_API_KEY` missing, a deterministic rule engine parses keywords (bar/line/pie, category aliases, time windows) and builds the same pipeline — **works offline**.
 - **Security**: every generated pipeline is sanitized (`QuerySanitizer`), forbidden stages rejected (`$out`, `$merge`, `$unionWith`), and `userId` match forced at execution layer.
 
 ### ⚡ Rate Limiting (RULE 2)
 - **REST**: 100 req/min per user/IP (token bucket via Redis Lua + in-memory fallback)
+- **Graceful Redis degradation**: if Redis is unreachable, the rate limiter automatically falls back to an in-memory token bucket (per-process only). Connection state is tracked via `ready`/`end`/`reconnecting` events — no retry storms.
 - **AI endpoints**: 10 req/min + 100 req/day per user (`UserAIQuota` collection with TTL)
 - **429 payload**:
   ```json
@@ -124,7 +121,7 @@ Expense-Tracker/
 │   ├── src/
 │   │   ├── config/redis.js          # ioredis + in-memory Map fallback + Lua script
 │   │   ├── services/
-│   │   │   ├── geminiService.js     # Gemini 2.0 Flash + rule fallback
+│   │   │   ├── geminiService.js     # Gemini 3.6 Flash + rule fallback
 │   │   │   ├── querySanitizer.js    # read-only enforcement + userId injection
 │   │   │   └── redisService.js      # thin cache wrapper
 │   ├── ml/                          # Python FastAPI microservice (optional)
@@ -264,25 +261,28 @@ Deploys 3 services for **$0/month**:
 | GET | `/api/v1/ai/health` | ❌ | — | `{status, engine, geminiModel, ruleFallback, mlService}` |
 | POST | `/api/v1/ai/categorize` | ✅ | 10/min | `{description, amount?}` → `{category, confidence, suggested}` |
 | POST | `/api/v1/ai/anomaly` | ✅ | 10/min | `{amount, history[], category?}` → `{isAnomaly, anomalyReason, zScore, pctAboveMean}` |
-| POST | `/api/v1/ai/query` | ✅ | 10/min + 100/day | `{question}` → streams `AIAnalyticsResponse` via SSE |
+| POST | `/api/v1/ai/query` | ✅ | 10/min + 100/day | `{question, chatHistory?}` → `{ success, data: AIAnalyticsResponse, engine, engineLabel }` |
 
-### SSE Event Format (`/api/v1/ai/query`)
+### Response Format (`/api/v1/ai/query`)
+```json
+{
+  "success": true,
+  "data": {
+    "explanation": "Here's your spending by category...",
+    "generatedQuery": "[MongoDB aggregation pipeline]",
+    "chartType": "bar",
+    "chartTitle": "Expenses by Category",
+    "xAxisKey": "category",
+    "yAxisKey": "total",
+    "data": [{ "category": "Food", "total": 1500 }, ...],
+    "summaryMetrics": { "totalSpend": 4200, "topCategory": "Food" }
+  },
+  "engine": "gemini-3.6-flash",
+  "engineLabel": "Gemini 3.6 Flash"
+}
 ```
-event: agent_state
-data: {"stage": "parsing", "message": "Parsing user financial query..."}
 
-event: agent_state
-data: {"stage": "generating", "message": "Generating safe query..."}
-
-event: agent_state
-data: {"stage": "executing", "message": "Executing aggregation..."}
-
-event: agent_data
-data: {"explanation":"...","generatedQuery":"...","chartType":"bar","chartTitle":"...","xAxisKey":"category","yAxisKey":"total","data":[...],"summaryMetrics":{...}}
-
-event: done
-data: {}
-```
+> If `GEMINI_API_KEY` is missing or Gemini fails, the response falls back to a deterministic rule-based engine (`engine: "rule-based-fallback"`).
 
 ---
 
@@ -318,4 +318,6 @@ ISC — see `backend/package.json`.
 
 ---
 
-> **Note on committed `.env`:** The repo currently contains a real `backend/.env` with a live MongoDB URI and JWT secret. **Rotate both before any public deployment** (new Atlas DB user + `openssl rand -hex 32`). The `.gitignore` excludes `.env`; templates are in `.env.example`.
+> **Note on `.env`:** The `.gitignore` excludes `.env`; it is **not** tracked in git. Templates are in `backend/.env.example` and `frontend/expense-tracker/.env.example`. If you previously committed a `.env` with secrets, **rotate them** (new Atlas DB user + `openssl rand -hex 32`) and purge the old values from git history.
+>
+> **Local DNS proxy fix:** If your system DNS resolves to `127.0.0.1` (VPN/ad-blocker proxy), Node.js's c-ares resolver cannot look up MongoDB Atlas SRV records. The backend detects this and overrides c-ares with public resolvers (`8.8.8.8`, `1.1.1.1`) for `mongodb+srv://` connections. This is handled automatically in `config/db.js`.
