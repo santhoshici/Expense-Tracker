@@ -1,10 +1,10 @@
-﻿# 💰 Expense Tracker (AI/ML Edition)
+﻿# Expense Tracker (AI/ML Edition)
 
 A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly detection**, **auto-categorization**, and a **Gemini-powered financial copilot** that understands natural language queries and renders interactive charts.
 
 ---
 
-## 🚀 Live Demo
+## Live Demo
 | Service | URL |
 |---|---|
 | **Frontend (React + Vite)** | [https://expense-tracker-frontend-6bgy.onrender.com](https://expense-tracker-frontend-6bgy.onrender.com) |
@@ -15,14 +15,29 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 
 ---
 
-## 📸 Screenshots
-| Dashboard | Income | Expense |
-|---|---|---|---|
-| ![Dashboard](SS_Dashboard1.png) | ![Income](SS_Income.png) | ![Expense](SS_Expense.png) | 
+## Screenshots
+
+## Dashboard
+
+<p align="center">
+  <img src="SS_Dashboard1.png" alt="Dashboard" width="900">
+</p>
+
+## Income Tracking
+
+<p align="center">
+  <img src="SS_Income.png" alt="Income Tracking" width="900">
+</p>
+
+## Expense Tracking
+
+<p align="center">
+  <img src="SS_Expense.png" alt="Expense Tracking" width="900">
+</p>
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 - **React 19** + **Vite** (ESM, no TypeScript — plain JSX for zero-config build)
@@ -52,26 +67,26 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 
 ---
 
-## ✨ Core Features
+## Core Features
 
-### 🔐 Authentication
+### Authentication
 - Register / Login / Get User / Profile Image Upload
 - JWT in `Authorization: Bearer <token>` header
 - Passwords hashed with bcrypt (cost 10)
 - Token stored in `localStorage`; 401 → auto-redirect to `/login`
 
-### 💸 Income & Expense Management
+### Income & Expense Management
 - Add / List / Delete / Download Excel (per user, scoped by `userId`)
 - **Auto-categorization**: if category missing, backend predicts from description + amount (confidence ≥ 0.65 else "Uncategorized / Review Required")
 - **Real-time anomaly detection**: on every expense add, computes z-score vs last 90 days of same-category spend; flags if `z > 2.5` or `amount > 3× median` → persists `isAnomaly`, `anomalyReason`, `anomalyCheckedAt` on the document
 
-### 📊 Dashboard Analytics
+### Dashboard Analytics
 - Total income / expense / net balance
 - Last 30/60-day trends
 - Category breakdowns (bar/pie)
 - **Anomaly feed**: recent flagged transactions surfaced in `GET /api/v1/dashboard` → renders as `AnomalyAlertBanner`
 
-### 🤖 Expense Copilot (RULE 3, 5)
+### Expense Copilot (RULE 3, 5)
 - **Floating chat panel** on all dashboard pages
 - **Theme-aware**: adapts to light/dark mode automatically
 - **Natural language → chart**: "Show me a bar chart of food vs entertainment over the last 3 months"
@@ -81,7 +96,7 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 - **Fallback**: if `GEMINI_API_KEY` missing, a deterministic rule engine parses keywords (bar/line/pie, category aliases, time windows) and builds the same pipeline — **works offline**.
 - **Security**: every generated pipeline is sanitized (`QuerySanitizer`), forbidden stages rejected (`$out`, `$merge`, `$unionWith`), and `userId` match forced at execution layer.
 
-### ⚡ Rate Limiting (RULE 2)
+### Rate Limiting (RULE 2)
 - **REST**: 100 req/min per user/IP (token bucket via Redis Lua + in-memory fallback)
 - **Graceful Redis degradation**: if Redis is unreachable, the rate limiter automatically falls back to an in-memory token bucket (per-process only). Connection state is tracked via `ready`/`end`/`reconnecting` events — no retry storms.
 - **AI endpoints**: 10 req/min + 100 req/day per user (`UserAIQuota` collection with TTL)
@@ -92,7 +107,7 @@ A production-grade **MERN + AI/ML** expense tracker with **real-time anomaly det
 
 ---
 
-## 📂 Folder Structure
+## Folder Structure
 ```
 Expense-Tracker/
 ├── backend/
@@ -165,7 +180,7 @@ Expense-Tracker/
 
 ---
 
-## ⚙️ Installation & Setup
+## Installation & Setup
 
 ### 1. Clone
 ```bash
@@ -201,7 +216,7 @@ uvicorn main:app --reload --port 8000
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 ### Backend (`backend/.env`)
 | Variable | Required | Default | Description |
@@ -225,7 +240,7 @@ uvicorn main:app --reload --port 8000
 
 ---
 
-## 🚀 Deploy to Render (Free Tier)
+## Deploy to Render (Free Tier)
 **Complete step-by-step workbook:** → [`DEPLOY_TO_RENDER.md`](DEPLOY_TO_RENDER.md)
 
 Deploys 3 services for **$0/month**:
@@ -235,7 +250,7 @@ Deploys 3 services for **$0/month**:
 
 ---
 
-## 🔧 API Reference (Key Endpoints)
+## API Reference (Key Endpoints)
 
 ### Auth
 | Method | Path | Auth | Description |
@@ -286,7 +301,7 @@ Deploys 3 services for **$0/month**:
 
 ---
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 ```bash
 # Backend syntax check
@@ -307,12 +322,12 @@ npm run build   # exits 0 if clean
 
 ---
 
-## 📝 License
+## License
 ISC — see `backend/package.json`.
 
 ---
 
-## 🙌 Author
+## Author
 **Santhosh Kumar**  
 🔗 [GitHub](https://github.com/santhoshici) • [LinkedIn](https://www.linkedin.com/in/santhoshkumar546)
 
